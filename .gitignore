@@ -1,0 +1,116 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# VSCode settings
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# Test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Pyright
+.pyright/
+
+# Pylint
+.pylint.d/
+
+# Other editor directories
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# dotenv
+*.env
+.env.*
+
+# Ignore all files in subdirectories matching above patterns
+**/__pycache__/
+**/*.py[cod]
+**/venv/
+**/.env/
+**/.venv/
+**/ENV/
+**/env/
+**/env.bak/
+**/venv.bak/
+**/.vscode/
+**/build/
+**/dist/
+**/*.egg-info/
+**/.eggs/
+**/*.egg
+**/MANIFEST
+**/htmlcov/
+**/.tox/
+**/.nox/
+**/.coverage
+**/.coverage.*
+**/.cache
+**/.pytest_cache/
+**/nosetests.xml
+**/coverage.xml
+**/*.cover
+**/*.log
+**/.ipynb_checkpoints
+**/.mypy_cache/
+**/.dmypy.json
+**/dmypy.json
+**/.pyre/
+**/.pyright/
+**/.pylint.d/
+**/.idea/
+**/*.sublime-workspace
+**/*.sublime-project
+**/.DS_Store
+**/Thumbs.db
+**/ehthumbs.db
+**/Desktop.ini
+**/*.env
+**/.env.*
