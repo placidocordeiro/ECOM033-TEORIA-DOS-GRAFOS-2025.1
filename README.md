@@ -27,7 +27,7 @@ Este repositório contém uma atividade da disciplina de Teoria dos Grafos, comp
          ```bash
          venv\Scripts\activate
          ```
-4. Instale as dependências:
+4. Instale as dependências (se houver):
      ```bash
      pip install -r requirements.txt
      ```
