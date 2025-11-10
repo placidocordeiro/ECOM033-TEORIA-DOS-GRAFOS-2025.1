@@ -7,6 +7,8 @@ import json
 import os
 import matplotlib.pyplot as plt
 
+PLOT_PATH = "./plots/"
+
 def get_xy(fileline: str) -> tuple:
     if not fileline or not fileline.strip():
         raise ValueError("Linha vazia ao ler coordenada.")
@@ -35,16 +37,77 @@ def create_visibility_graph(start, goal, obstacles):
     vertices = [start, goal] + [v for obs in obstacles for v in obs]
     polygons = [Polygon(obs) for obs in obstacles]
 
+    for v in vertices:
+        G.add_node(v, pos=v)
+
     for v1, v2 in combinations(vertices, 2):
         line = LineString([v1, v2])
         is_visible = all(not (line.crosses(poly) or line.within(poly)) for poly in polygons)
         if is_visible:
-            dist = math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2)
+            dist = math.hypot(v2[0]-v1[0], v2[1]-v1[1])
             G.add_edge(v1, v2, weight=dist)
     
     return G
 
-def draw_map(start, goal, obstacles, G, figsize=(8, 8), padding=5.0):
+class UnionFind:
+    def __init__(self):
+        self.parent = {}
+        self.rank = {}
+
+    def make_set(self, x):
+        if x not in self.parent:
+            self.parent[x] = x
+            self.rank[x] = 0
+
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+
+    def union(self, x, y):
+        xroot = self.find(x)
+        yroot = self.find(y)
+        if xroot == yroot:
+            return False
+        if self.rank[xroot] < self.rank[yroot]:
+            self.parent[xroot] = yroot
+        elif self.rank[yroot] < self.rank[xroot]:
+            self.parent[yroot] = xroot
+        else:
+            self.parent[yroot] = xroot
+            self.rank[xroot] += 1
+        return True
+
+def compute_mst(graph):
+    """
+    Implementação algoritmo de Kruskal
+    """
+    mst = nx.Graph()
+    for n, data in graph.nodes(data=True):
+        mst.add_node(n, **data)
+
+    uf = UnionFind()
+    for n in graph.nodes():
+        uf.make_set(n)
+
+    edges = []
+    for u, v, attr in graph.edges(data=True):
+        w = attr.get('weight', None)
+        if w is None:
+            w = float('inf')
+        edges.append( (w, u, v) )
+
+    edges.sort(key=lambda x: x[0])
+
+    for w, u, v in edges:
+        if uf.find(u) != uf.find(v):
+            merged = uf.union(u, v)
+            if merged:
+                mst.add_edge(u, v, weight=w)
+
+    return mst
+
+def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0):
     fig, ax = plt.subplots(figsize=figsize)
 
     for obs in obstacles:
@@ -67,9 +130,17 @@ def draw_map(start, goal, obstacles, G, figsize=(8, 8), padding=5.0):
 
     for edge in G.edges(data=True):
         v1, v2, weight = edge
-        ax.plot([v1[0], v2[0]], [v1[1], v2[1]], color='blue', linewidth=1, alpha=0.5)
-
+        ax.plot([v1[0], v2[0]], [v1[1], v2[1]], color='#FF0000', linewidth=1, alpha=0.5)
+        
+    
+    fig.savefig(output_path, bbox_inches='tight', dpi=250)
     plt.show()
+
+def save_graph(graph, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    data = nx.node_link_data(graph, edges="links")
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def main():
     try:
@@ -84,14 +155,22 @@ def main():
         for obs in obstacles:
             print(obs)
         print()
+        
+        print("PLOTANDO GRÁFICO DE VISIBILIDADE (plots/vis_grapsh)")
+        plot_file = "vis_graph.png"
+        draw_map(start, goal, obstacles, G, PLOT_PATH + plot_file)
 
-        print("SALVANDO GRAFO...")
-        json_data = nx.node_link_data(G, edges="edges")
+        print("SALVANDO GRAFO DE VISIBILIDADE (data/grafo.json)...")
         os.makedirs('data', exist_ok=True)
-        with open('data/grafo.json', 'w') as f:
-            json.dump(json_data, f, indent=2)
+        save_graph(G, 'data/grafo.json')
 
-        draw_map(start, goal, obstacles, G)
+        print("CALCULANDO ÁRVORE GERADORA MÍNIMA (MST) VIA KRUSKAL")
+        mst = compute_mst(G)
+        print("ÁRVORE GERADORA MÍNIMA ENCONTRADA COM SUCESSO!!")
+        
+        print("PLOTANDO ÁRVORE GERADORA MÍNIMA....")
+        plot_file = "mst_graph"
+        draw_map(start, goal, obstacles, mst, PLOT_PATH + plot_file)
 
     except Exception as e:
         print("Erro ao desenhar mapa:", e)
