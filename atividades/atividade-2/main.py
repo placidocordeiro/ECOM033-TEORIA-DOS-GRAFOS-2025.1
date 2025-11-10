@@ -150,17 +150,23 @@ def dijkstra(mst: nx.Graph, start, goal):
 def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0, title=None):
     fig, ax = plt.subplots(figsize=figsize)
 
+    obstacles_float = []
     for obs in obstacles:
-        poly_patch = MplPolygon(obs, closed=True, facecolor='lightgray', edgecolor='black', alpha=0.7)
+        obs_float = [(float(x), float(y)) for x, y in obs]
+        obstacles_float.append(obs_float)
+        poly_patch = MplPolygon(obs_float, closed=True, facecolor='lightgray', edgecolor='black', alpha=0.7)
         ax.add_patch(poly_patch)
-        xs, ys = zip(*obs + [obs[0]])
+        xs, ys = zip(*obs_float + [obs_float[0]])
         ax.plot(xs, ys, color='black', linewidth=1)
 
-    ax.plot(start[0], start[1], marker='o', color='green', markersize=8, label='start')
-    ax.plot(goal[0], goal[1], marker='x', color='red', markersize=8, label='goal')
+    start_float = (float(start[0]), float(start[1]))
+    goal_float = (float(goal[0]), float(goal[1]))
 
-    xs = [start[0], goal[0]] + [x for obs in obstacles for x, _ in obs]
-    ys = [start[1], goal[1]] + [y for obs in obstacles for _, y in obs]
+    ax.plot(start_float[0], start_float[1], marker='o', color='green', markersize=8, label='start')
+    ax.plot(goal_float[0], goal_float[1], marker='x', color='red', markersize=8, label='goal')
+
+    xs = [start_float[0], goal_float[0]] + [x for obs in obstacles_float for x, _ in obs]
+    ys = [start_float[1], goal_float[1]] + [y for obs in obstacles_float for _, y in obs]
 
     ax.set_xlim(min(xs) - padding, max(xs) + padding)
     ax.set_ylim(min(ys) - padding, max(ys) + padding)
@@ -168,13 +174,16 @@ def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0
     ax.grid(True)
     ax.legend()
 
-    for edge in G.edges(data=True):
-        v1, v2, weight = edge
-        ax.plot([v1[0], v2[0]], [v1[1], v2[1]], color='#FF0000', linewidth=1, alpha=0.5)
+    for edge in G.edges():
+        v1, v2 = edge
+        v1_float = (float(v1[0]), float(v1[1]))
+        v2_float = (float(v2[0]), float(v2[1]))
+        ax.plot([v1_float[0], v2_float[0]], [v1_float[1], v2_float[1]], color='#FF0000', linewidth=1, alpha=0.5)
         
     if title is not None:
         ax.set_title(title)
     
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path, bbox_inches='tight', dpi=250)
     plt.show()
 
@@ -198,45 +207,47 @@ def main():
             print(obs)
         print()
         
-        print("PLOTANDO GRÁFICO DE VISIBILIDADE (plots/vis_grapsh)")
-        plot_file = "vis_graph.png"
-        draw_map(start, goal, obstacles, G, PLOT_PATH + plot_file)
+        print("PLOTANDO GRÁFICO DE VISIBILIDADE (plots/vis_graph)")
+        os.makedirs(PLOT_PATH, exist_ok=True)
+        plot_file = os.path.join(PLOT_PATH, "vis_graph.png")
+        draw_map(start, goal, obstacles, G, plot_file, title="Grafo de Visibilidade")
 
         print("SALVANDO GRAFO DE VISIBILIDADE (data/grafo.json)...")
-        os.makedirs('data', exist_ok=True)
-        save_graph(G, 'data/grafo.json')
+        os.makedirs(DATA_PATH, exist_ok=True)
+        save_graph(G, os.path.join(DATA_PATH, 'grafo.json'))
 
         print("CALCULANDO ÁRVORE GERADORA MÍNIMA (MST) VIA KRUSKAL")
         mst = compute_mst_kruskal(G)
         print("ÁRVORE GERADORA MÍNIMA ENCONTRADA COM SUCESSO!!")
         
         print("PLOTANDO ÁRVORE GERADORA MÍNIMA....")
-        plot_file = "mst_graph"
-        draw_map(start, goal, obstacles, mst, PLOT_PATH + plot_file)
+        plot_file = os.path.join(PLOT_PATH, "mst_graph.png")
+        draw_map(start, goal, obstacles, mst, plot_file, title="Árvore Geradora Mínima")
         
         print("EXECUTANDO DIJKSTRA PARA ENCONTRAR O CAMINHO MÍNIMO")
         minimum_path, cost = dijkstra(mst, start, goal)
         print("CAMINHO MÍNIMO ENCONTRADO COM SUCESSO!!")
-        save_graph(minimum_path, DATA_PATH + "diskstra_path.png")
+        
+        save_graph(minimum_path, os.path.join(DATA_PATH, "dijkstra_path.json"))
         
         # ========== DEBUG ===============
-    
         print("custo:", cost, type(cost))
         print("nós do path_graph:", list(minimum_path.nodes()))
         print("arestas do path_graph:", list(minimum_path.edges(data=True)))
-        # se seus nós são tuplas (x,y), mostre tipos e valores
         for n in minimum_path.nodes():
             print("node:", n, "type:", type(n))
             if isinstance(n, tuple):
                 print("  elems types:", [type(e) for e in n])
         
         print("PLOTANDO CAMINHO MÍNIMO...")
-        title = f"Custo mínimo encontrado: {cost}"
-        file_path = PLOT_PATH + "minimum_path.png"
-        draw_map(start, goal, obstacles, minimum_path, file_path, title)
+        title = f"Custo mínimo encontrado: {cost:.2f}"
+        file_path = os.path.join(PLOT_PATH, "minimum_path.png")
+        draw_map(start, goal, obstacles, minimum_path, file_path, title=title)
         
     except Exception as e:
         print("Erro ao desenhar mapa:", e)
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
