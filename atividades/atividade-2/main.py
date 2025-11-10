@@ -6,8 +6,11 @@ from matplotlib.patches import Polygon as MplPolygon
 import json
 import os
 import matplotlib.pyplot as plt
+import heapq
+import numpy as np
 
 PLOT_PATH = "./plots/"
+DATA_PATH = "./data"
 
 def get_xy(fileline: str) -> tuple:
     if not fileline or not fileline.strip():
@@ -78,10 +81,7 @@ class UnionFind:
             self.rank[xroot] += 1
         return True
 
-def compute_mst(graph):
-    """
-    Implementação algoritmo de Kruskal
-    """
+def compute_mst_kruskal(graph):
     mst = nx.Graph()
     for n, data in graph.nodes(data=True):
         mst.add_node(n, **data)
@@ -107,7 +107,47 @@ def compute_mst(graph):
 
     return mst
 
-def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0):
+def dijkstra(mst: nx.Graph, start, goal):
+    dist = {node: math.inf for node in mst.nodes()}
+    dist[start] = 0
+
+    prev = {node: None for node in mst.nodes()}
+
+    pq = [(0, start)]
+
+    while pq:
+        current_dist, current_node = heapq.heappop(pq)
+
+        if current_node == goal:
+            break
+
+        if current_dist > dist[current_node]:
+            continue
+
+        for neighbor in mst.neighbors(current_node):
+            weight = mst[current_node][neighbor]['weight']
+            new_dist = current_dist + weight
+
+            if new_dist < dist[neighbor]:
+                dist[neighbor] = new_dist
+                prev[neighbor] = current_node
+                heapq.heappush(pq, (new_dist, neighbor))
+    path = []
+    node = goal
+    while node is not None:
+        path.append(node)
+        node = prev[node]
+    path.reverse()
+
+    path_graph = nx.Graph()
+    for i in range(len(path)-1):
+        u = path[i]
+        v = path[i+1]
+        path_graph.add_edge(u, v, weight=mst[u][v]['weight'])
+
+    return path_graph, dist[goal]
+
+def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0, title=None):
     fig, ax = plt.subplots(figsize=figsize)
 
     for obs in obstacles:
@@ -132,6 +172,8 @@ def draw_map(start, goal, obstacles, G, output_path, figsize=(8, 8), padding=5.0
         v1, v2, weight = edge
         ax.plot([v1[0], v2[0]], [v1[1], v2[1]], color='#FF0000', linewidth=1, alpha=0.5)
         
+    if title is not None:
+        ax.set_title(title)
     
     fig.savefig(output_path, bbox_inches='tight', dpi=250)
     plt.show()
@@ -165,13 +207,34 @@ def main():
         save_graph(G, 'data/grafo.json')
 
         print("CALCULANDO ÁRVORE GERADORA MÍNIMA (MST) VIA KRUSKAL")
-        mst = compute_mst(G)
+        mst = compute_mst_kruskal(G)
         print("ÁRVORE GERADORA MÍNIMA ENCONTRADA COM SUCESSO!!")
         
         print("PLOTANDO ÁRVORE GERADORA MÍNIMA....")
         plot_file = "mst_graph"
         draw_map(start, goal, obstacles, mst, PLOT_PATH + plot_file)
-
+        
+        print("EXECUTANDO DIJKSTRA PARA ENCONTRAR O CAMINHO MÍNIMO")
+        minimum_path, cost = dijkstra(mst, start, goal)
+        print("CAMINHO MÍNIMO ENCONTRADO COM SUCESSO!!")
+        save_graph(minimum_path, DATA_PATH + "diskstra_path.png")
+        
+        # ========== DEBUG ===============
+    
+        print("custo:", cost, type(cost))
+        print("nós do path_graph:", list(minimum_path.nodes()))
+        print("arestas do path_graph:", list(minimum_path.edges(data=True)))
+        # se seus nós são tuplas (x,y), mostre tipos e valores
+        for n in minimum_path.nodes():
+            print("node:", n, "type:", type(n))
+            if isinstance(n, tuple):
+                print("  elems types:", [type(e) for e in n])
+        
+        print("PLOTANDO CAMINHO MÍNIMO...")
+        title = f"Custo mínimo encontrado: {cost}"
+        file_path = PLOT_PATH + "minimum_path.png"
+        draw_map(start, goal, obstacles, minimum_path, file_path, title)
+        
     except Exception as e:
         print("Erro ao desenhar mapa:", e)
 
