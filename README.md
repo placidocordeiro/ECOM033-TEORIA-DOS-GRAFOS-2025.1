@@ -12,7 +12,7 @@ Este repositório contém uma atividade da disciplina de Teoria dos Grafos, comp
 
 1. Navegue até a pasta da questão:
      ```bash
-     cd cenario/questao
+     cd caminho/para/a/questao
      ```
 2. Crie um ambiente virtual Python:
      ```bash
